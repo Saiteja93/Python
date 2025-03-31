@@ -1,8 +1,8 @@
 age = int(input("Enter your age: "))
 if age>18:
-    print ("you are eligible")
+    print ("you are eligible wishing you a happy weekend")
 else:
-    print ("you are not eligible")
+    print ("sorry you are not eligible to enter pub")
 
 
 
