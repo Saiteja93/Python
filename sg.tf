@@ -1,5 +1,5 @@
 resource "aws_security_group" "allow_all_1" {
-  name        = "aallow_all_1"
+  name        = "allow-all-1"
   description = "Allow all traffic"
 
   ingress {
@@ -11,14 +11,14 @@ resource "aws_security_group" "allow_all_1" {
   }
 
   egress {
-     from_port  = 0
+    from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = var.cidr_blocks
   }
 
   tags = {
-    Name = "allow_all_1"
-    terraform = true
+    Name = "allow-all-1"
+    Terraform = true
   }
 }
