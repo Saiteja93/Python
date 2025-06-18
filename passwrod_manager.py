@@ -25,16 +25,16 @@ def view():
         for line in f.readlines():
             data = line.rstrip()
             user, passw = data.split("|")
-            print("User:", user, "| Password:",
+            print("Username:", user, "| Password:",
                   fer.decrypt(passw.encode()).decode())
 
 
 def add():
-    username = input('Account Name: ')
-    password = input("Password: ")
+    user = input('Account Name: ')
+    passw = input("Password: ")
 
     with open('passwords.txt', 'a') as f:
-        f.write(username + "|" + fer.encrypt(password.encode()).decode() + "\n")
+        f.write(user+ "|" + fer.encrypt(passw.encode()).decode() + "\n")
 
 
 while True:
