@@ -1,0 +1,6 @@
+{
+    "electric": ["s-model", "x-model", "y-model"],
+    "gas": ["tiguan", "atlas", "polo","taos"],
+    "station_battery": 1000,
+    "max_per": 100
+}
