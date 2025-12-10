@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "title": "Man must explore, and this is exploration at its greatest",
+    "subtitle": "Problems look mighty small from 150 miles up",
+    "body": "I believe exploration is in our nature...",
+    "author": "Start Bootstrap",
+    "date": "September 24, 2023"
+  },
+  {
+    "id": 2,
+    "title": "I believe every human has a finite number of heartbeats.",
+    "subtitle": "I don't intend to waste any of mine.",
+    "body": "Life is precious and every second counts...",
+    "author": "Start Bootstrap",
+    "date": "September 18, 2023"
+  },
+  {
+    "id": 3,
+    "title": "Science has not yet mastered prophecy",
+    "subtitle": "We predict too much for the next year and yet far too little for the next ten.",
+    "body": "Looking ahead is essential but difficult...",
+    "author": "Start Bootstrap",
+    "date": "August 24, 2023"
+  },
+  {
+    "id": 4,
+    "title": "Failure is not an option",
+    "subtitle": "Exploration is part of our destiny.",
+    "body": "Generations rely on us pushing boundaries...",
+    "author": "Start Bootstrap",
+    "date": "July 8, 2023"
+  }
+]
