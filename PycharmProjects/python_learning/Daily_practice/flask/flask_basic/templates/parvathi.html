@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>parvathi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+
+   <div style="display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 20px;">
+    <!-- Home Button on the left -->
+    <a href="{{ url_for('home') }}" style="position: absolute; left: 0;">
+        <button style="padding:10px 20px;">Home</button>
+    </a>
+    <!-- H1 in the center -->
+    <h1 style="margin: 0 auto; text-align: center;">Parvathi</h1>
+    </div>
+
+
+
+
+
+    <h2 style="text-align: center">Hi {{name}} parvathi is going to bless you 🙏</h2>
+
+    <div style="text-align: center;">
+        <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExa296aXZ4eXE5bTYwOGRmamVzc2lrZGd4dXpwNHNlN2RrY3QzbDh6MyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/qzcmxfBfzypzy/giphy.gif"
+            height="500">
+    </div>
+
+
+</body>
+</html>

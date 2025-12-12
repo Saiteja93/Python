@@ -1,0 +1,8 @@
+body {
+    background-image: url("bg.jpg");   /* your image */
+    background-repeat: no-repeat;
+    background-size: cover;            /* fill the screen */
+    background-position: center;
+    margin: 0;
+    padding: 0;
+}

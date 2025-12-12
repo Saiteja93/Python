@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Blogs</title>
+</head>
+<body>
+    <h1 style="text-align : center">Welcome to our live blog data</h1>
+     {% for posts in posts_data: %}
+         <h2>User Id : {{ posts["userId"] }}</h2>
+         <h2>Id : {{ posts["id"] }}</h2>
+         <h2>Title : {{ posts["title"] }}</h2>
+    {% endfor %}
+
+</body>
+</html>

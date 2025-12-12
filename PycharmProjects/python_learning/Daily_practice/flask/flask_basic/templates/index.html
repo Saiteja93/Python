@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gods</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<body>
+     <h1 style="text-align: center">Ganesh</h1>
+     <h2 style="text-align: center">Hi Bhakthas you can visit my father Shiva and my mother Parvathi for blessing</h2>
+
+    <div style="text-align: center;">
+        <img src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmxibnZ4cTZyYXhhaWc5a3Mxam40N3NiY3YyMXZreWp3b2s1eGhsbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/SkZpuCGpxHGA94ilZB/giphy.gif"
+        height="500">
+    </div>
+
+     <div style="width:500px; margin:20px auto; display:flex; justify-content:space-between;">
+    <a href="{{ url_for('shiva', name='Bhaktha') }}">
+        <button style="padding:10px 20px;">Father Shiva</button>
+    </a>
+    <a href="{{ url_for('parvathi', name='Bhaktha') }}">
+        <button style="padding:10px 20px;">Mother Parvathi</button>
+    </a>
+    </div>
+
+
+
+
+</body>
+</html>
