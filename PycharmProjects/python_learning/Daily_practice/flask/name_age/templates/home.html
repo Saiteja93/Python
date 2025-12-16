@@ -3,13 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Home page</title>
-</head>
-<body>
-    <h1>This is home page</h1>
-    <h2>Random number is {{number}}</h2>
+    <link rel="stylesheet" href="/static/css/styles.css">
 
+</head>
+
+<body>
+     <a href="{{ url_for('blogs') }}" style="position: absolute; left: 0;">
+        <button style="padding: 10px 20px;">Go To Blogs</button>
+    </a>
+
+    <h1 style = "text-align: center">This is home page</h1>
+    <h2 style = "text-align: center">Random number is {{number}}</h2>
+
+
+
+    <!-- Footer should be inside body -->
+    <footer style="margin-top: 100px;">
+        Copyright {{year}}. This copyrights belongs to SaiTeja.co.in company
+    </footer>
 </body>
-<footer>
-    Copyright {{year}}. This copyrights belongs to saiteja.co.in company
-</footer>
+
 </html>

@@ -3,13 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Blogs</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <h1 style="text-align : center">Welcome to our live blog data</h1>
-     {% for posts in posts_data: %}
-         <h2>User Id : {{ posts["userId"] }}</h2>
-         <h2>Id : {{ posts["id"] }}</h2>
-         <h2>Title : {{ posts["title"] }}</h2>
+    <a href="{{ url_for('home') }}" style="position: absolute; left: 0;">
+        <button style="padding:10px 20px;">Home</button>
+    </a>
+
+    <h1 style="text-align:center;">Welcome to our live blogs data</h1>
+    <h3 style = "text-align : center">You can view users data by selecting user id </h3>
+
+
+
+    {% for user_id in user_ids %}
+        <a href="{{ url_for('blogs_by_user', user_id=user_id) }}">
+            <button style="padding:10px 20px; margin:5px;">
+            User ID {{ user_id }}
+            </button>
+        </a>
     {% endfor %}
 
 </body>

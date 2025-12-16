@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Selected blog</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div style="display: flex; gap: 20px;">>
+        <a href="{{ url_for('home') }}">
+            <button style="padding:10px 20px;">Home</button>
+        </a>
+        <a href="{{ url_for('blogs') }}">
+             <button style="padding: 10px 20px;">Go To Blogs</button>
+        </a>
+
+    </div>
+     {% for post in posts %}
+        <h2>User Id : {{ post.userId }}</h2>
+        <h2>Id : {{ post.id }}</h2>
+        <h2>Title : {{ post.title }}</h2>
+
+    {% endfor %}
+
+</body>
+</html>
