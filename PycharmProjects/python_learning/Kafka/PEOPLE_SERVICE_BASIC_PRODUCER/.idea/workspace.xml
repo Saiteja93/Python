@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="cea5c75a-ff11-42de-8d4e-cca7e20bfeb9" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Daily_practice/DSA/practice1.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Daily_practice/DSA/practice1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/Project-2/books2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/Project-2/books_data.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Fast_API/TodoApp/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Fast_API/TodoApp/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Fast_API/TodoApp/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/todos.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/todos.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../Fast_API/TodoApp/routers/users.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/TodoApp/todosapp.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/project-1/assigmnet.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/project-1/books_data.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Fast_API/project-1/fast_books.py" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../../../.." />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="37rxgJONF3j1x9iaF5u9qvIwUzN" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="false" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/akamhimaja/repo/Python/PycharmProjects/python_learning/Kafka/kafka_admin_api&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-53e2683a6804-9cdd278e9d02-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.26094.141" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="cea5c75a-ff11-42de-8d4e-cca7e20bfeb9" name="Changes" comment="" />
+      <created>1767675100879</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1767675100879</updated>
+    </task>
+    <servers />
+  </component>
+</project>
