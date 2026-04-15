@@ -20,7 +20,7 @@ def verify_password(plain, hashed):
     return pwd_context.verify(plain,hashed)
 
 
-def create_access_toekn(username: str,user_id: int, user_role: str,expires_delta:timedelta):
+def create_access_token(username: str,user_id: int, user_role: str,expires_delta:timedelta):
     encode = {'sub': username, 'id': user_id, 'role': user_role}
     expires = datetime.now(timezone.utc) + expires_delta
     encode.update({'exp':expires})

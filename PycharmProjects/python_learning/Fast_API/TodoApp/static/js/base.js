@@ -26,7 +26,8 @@
                 });
 
                 if (response.ok) {
-                    form.reset(); // Clear the form
+                    form.reset();
+                     window.location.href = '/todos/todo-page';// Clear the form
                 } else {
                     // Handle error
                     const errorData = await response.json();
@@ -40,16 +41,23 @@
     }
 
     // Edit Todo JS
-    const editTodoForm = document.getElementById('editTodoForm');
-    if (editTodoForm) {
-        editTodoForm.addEventListener('submit', async function (event) {
+    // Edit Todo JS
+const editTodoForm = document.getElementById('editTodoForm');
+
+if (editTodoForm) {
+    editTodoForm.addEventListener('submit', async function (event) {
         event.preventDefault();
+
         const form = event.target;
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
-        var url = window.location.pathname;
+
+        // 1. Grab the ID from the URL (e.g., /todos/edit-todo/5 -> 5)
+        const url = window.location.pathname;
         const todoId = url.substring(url.lastIndexOf('/') + 1);
 
+        // 2. Prepare the payload
+        // Note: HTML checkboxes only send "on" if checked, and nothing if unchecked
         const payload = {
             title: data.title,
             description: data.description,
@@ -59,15 +67,13 @@
 
         try {
             const token = getCookie('access_token');
-            console.log(token)
             if (!token) {
-                throw new Error('Authentication token not found');
+                window.location.href = '/auth/login-page';
+                return;
             }
 
-            console.log(`${todoId}`)
-
             const response = await fetch(`/todos/todo/${todoId}`, {
-                method: 'PUT',
+                method: 'PUT', // PUT is used for updates
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -76,28 +82,32 @@
             });
 
             if (response.ok) {
-                window.location.href = '/todos/todo-page'; // Redirect to the todo page
+                // Successful update -> Go back to the main list
+                window.location.href = '/todos/todo-page';
             } else {
-                // Handle error
                 const errorData = await response.json();
-                alert(`Error: ${errorData.detail}`);
+                alert(`Update Failed: ${errorData.detail}`);
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('An error occurred. Please try again.');
+            alert('An error occurred while updating.');
         }
     });
 
-        document.getElementById('deleteButton').addEventListener('click', async function () {
-            var url = window.location.pathname;
+    // 3. Handle the Delete Button
+    const deleteBtn = document.getElementById('deleteButton');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async function () {
+            // Confirm with the user before deleting
+            if (!confirm("Are you sure you want to delete this task?")) {
+                return;
+            }
+
+            const url = window.location.pathname;
             const todoId = url.substring(url.lastIndexOf('/') + 1);
 
             try {
                 const token = getCookie('access_token');
-                if (!token) {
-                    throw new Error('Authentication token not found');
-                }
-
                 const response = await fetch(`/todos/todo/${todoId}`, {
                     method: 'DELETE',
                     headers: {
@@ -106,65 +116,64 @@
                 });
 
                 if (response.ok) {
-                    // Handle success
-                    window.location.href = '/todos/todo-page'; // Redirect to the todo page
+                    window.location.href = '/todos/todo-page';
                 } else {
-                    // Handle error
                     const errorData = await response.json();
-                    alert(`Error: ${errorData.detail}`);
+                    alert(`Delete Failed: ${errorData.detail}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('An error occurred. Please try again.');
             }
         });
-
-        
     }
-
+}
     // Login JS
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async function (event) {
-            event.preventDefault();
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+    loginForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
 
-            const form = event.target;
-            const formData = new FormData(form);
+        const form = event.target;
+        const formData = new FormData(form);
 
-            const payload = new URLSearchParams();
-            for (const [key, value] of formData.entries()) {
-                payload.append(key, value);
+        const payload = new URLSearchParams();
+        for (const [key, value] of formData.entries()) {
+            payload.append(key, value);
+        }
+
+        try {
+            // Updated to /auth/login to match your Python router
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: payload.toString()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // 1. Clear any old/stale tokens first
+                document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+                // 2. SAVE THE NEW TOKEN WITH THE PATH ATTRBUTE (CRITICAL STEP)
+                // The "; path=/" makes the cookie available to /todos/todo-page AND /todos/edit-todo/
+                document.cookie = `access_token=${data.access_token}; path=/`;
+
+                // 3. Redirect to the home page
+                window.location.href = '/todos/todo-page';
+            } else {
+                const errorData = await response.json();
+                // If it's still 401, this alert will help confirm
+                alert(`Login Failed: ${errorData.detail}`);
             }
-
-            try {
-                const response = await fetch('/auth/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: payload.toString()
-                });
-
-                if (response.ok) {
-                    // Handle success (e.g., redirect to dashboard)
-                    const data = await response.json();
-                    // Delete any cookies available
-                    logout();
-                    // Save token to cookie
-                    document.cookie = `access_token=${data.access_token}; path=/`;
-                    window.location.href = '/todos/todo-page'; // Change this to your desired redirect page
-                } else {
-                    // Handle error
-                    const errorData = await response.json();
-                    alert(`Error: ${errorData.detail}`);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-            }
-        });
-    }
-
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        }
+    });
+}
     // Register JS
     const registerForm = document.getElementById('registerForm');
     if (registerForm) {
@@ -183,15 +192,15 @@
             const payload = {
                 email: data.email,
                 username: data.username,
-                first_name: data.firstname,
-                last_name: data.lastname,
+                first_name: data.first_name,
+                last_name: data.last_name,
                 role: data.role,
                 phone_number: data.phone_number,
                 password: data.password
             };
 
             try {
-                const response = await fetch('/auth', {
+                const response = await fetch('/auth/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -204,7 +213,7 @@
                 } else {
                     // Handle error
                     const errorData = await response.json();
-                    alert(`Error: ${errorData.message}`);
+                    alert(`Error: ${JSON.stringify(errorData.detail)}`);
                 }
             } catch (error) {
                 console.error('Error:', error);

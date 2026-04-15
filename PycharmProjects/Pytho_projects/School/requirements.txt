@@ -21,3 +21,4 @@ structlog==24.1.0
 
 # Optional (if using requests or httpx)
 httpx==0.27.0
+

@@ -1,15 +1,18 @@
 
 from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Request
 from pydantic import BaseModel
 from starlette import status
-from ..database import SessionLocal
+from starlette.responses import RedirectResponse
+
+from database import SessionLocal
 from typing import Annotated
 from sqlalchemy.orm import Session
-from ..models import Users
+from models import Users
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer
 from jose import jwt,JWTError
+from fastapi.templating import Jinja2Templates
 
 
 router = APIRouter(
@@ -20,7 +23,9 @@ SECRET_KEY = 'e13f82a967ab0e7623a9fbec4719d06303b309e03e36685c67f821c41ddfd32d'
 ALGORITHM = 'HS256'
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated= 'auto')
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/login')
+
+
 
 class CreateUserRequest(BaseModel):
     username : str
@@ -45,7 +50,28 @@ def get_db():
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
+templates = Jinja2Templates(directory="Templates")
 
+###pages###
+
+def redirect_to_login():
+    redirect_response = RedirectResponse(url="/auth/login-page", status_code=status.HTTP_302_FOUND)
+    redirect_response.delete_cookie(key="access_token")
+    return redirect_response
+
+@router.get("/logout")
+async def logout():
+    return redirect_to_login()
+@router.get("/login-page")
+def render_login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@router.get("/register-page")
+def render_register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+###endpoints###
 def authenticate_user(username: str, password: str, db ):
     user = db.query(Users).filter(Users.username==username).first()
     if not user:
@@ -94,7 +120,7 @@ async def create_user(db: db_dependency,
 
 
 
-@router.post('/token' ,response_model=Token)
+@router.post('/login' ,response_model=Token)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                  db: db_dependency):
     user = authenticate_user(form_data.username, form_data.password, db)
@@ -102,7 +128,12 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
         # Raise proper HTTP 401 error
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not have valid user")
 
-    token = create_access_token(username=user.username, user_id=user.id, user_role=user.role, expires_delta=timedelta(minutes=20))
+    token = create_access_token(
+        username=user.username,
+        user_id=user.id,
+        user_role=user.role,
+        expires_delta=timedelta(minutes=20)
+    )
 
     return {'access_token': token, 'token_type': 'bearer'}
 
