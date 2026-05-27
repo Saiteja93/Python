@@ -4,7 +4,7 @@ from random import randint,choice,uniform
 
 KAFKA_BROKER = "localhost:9092"
 KAFKA_TOPIC = "trade-events"
-STOCKS = ["APPL","GOOGL","TSLA","AMZN","HOOD"]
+STOCKS = ["AAPL","GOOGL","TSLA","AMZN","HOOD"]
 
 
 def json_serializer(data: dict) -> bytes:
@@ -35,7 +35,7 @@ if __name__=="__main__":
         print(f"Producer sending data to topic {KAFKA_TOPIC}")
         ticker = choice(STOCKS)
         event = build_trade(ticker)
-        print(f"sending{event["action"]} {event["quantity"]} X {ticker}")
+        print(f"\nsending{event["action"]} {event["quantity"]} X {ticker}")
         producer.send(
             KAFKA_TOPIC,
             key=ticker.encode("utf-8"),

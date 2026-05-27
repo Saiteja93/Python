@@ -20,4 +20,18 @@ consumer = KafkaConsumer(
     
 
 
+
 )
+if __name__ == "__main__":
+
+    try:
+        for message in consumer:
+           print(f"partition={message.partition} offset={message.offset} value={message.value}")
+    except KeyboardInterrupt:
+        print("\n Consumer stopped by user")
+    
+    finally:
+        consumer.close()
+
+
+    
