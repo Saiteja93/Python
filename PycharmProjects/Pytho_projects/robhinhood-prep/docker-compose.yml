@@ -1,0 +1,19 @@
+services:
+  kafka:
+    image: apache/kafka:3.7.0
+    ports:
+      - "9092:9092"
+
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: brokerage
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
