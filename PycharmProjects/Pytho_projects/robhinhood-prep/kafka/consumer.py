@@ -1,15 +1,38 @@
 import json
 from kafka import KafkaConsumer
+import psycopg2
 
 KAFKA_BROKER = "localhost:9092"
 KAFKA_TOPIC = "trade-events"
 GROUP_ID = "trade-process-group"
 
+DB_CONFIG = {
+    "host": "127.0.0.1",
+    "database": "brokerage",
+    "user": "admin",
+    "password": "secret",
+    "port": 5433,
+}
 
 def json_deserializer(data: bytes) -> dict:
     return json.loads(data.decode("utf-8"))
 
+def save_trade(event: dict):
 
+    conn = psycopg2.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO trades(ticker,action,quantity,price) VALUES(%s, %s,%s, %s)",
+        (
+            event.get("ticker"),
+            event.get("action"),
+            event.get("quantity"),
+            event.get("price")
+        )
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 consumer = KafkaConsumer(
     KAFKA_TOPIC,
@@ -27,6 +50,7 @@ if __name__ == "__main__":
     try:
         for message in consumer:
            print(f"partition={message.partition} offset={message.offset} value={message.value}")
+           save_trade(message.value)
     except KeyboardInterrupt:
         print("\n Consumer stopped by user")
     
