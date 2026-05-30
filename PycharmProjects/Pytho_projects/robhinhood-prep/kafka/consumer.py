@@ -4,7 +4,7 @@ import psycopg2
 
 KAFKA_BROKER = "localhost:9092"
 KAFKA_TOPIC = "trade-events"
-GROUP_ID = "trade-process-group"
+GROUP_ID = "trade-processor-group-v2"
 
 DB_CONFIG = {
     "host": "127.0.0.1",
@@ -22,12 +22,14 @@ def save_trade(event: dict):
     conn = psycopg2.connect(**DB_CONFIG)
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO trades(ticker,action,quantity,price) VALUES(%s, %s,%s, %s)",
+        "INSERT INTO trades(trade_id,symbol,side,quantity,price, total_value) VALUES(%s, %s,%s, %s,%s,%s)",
         (
-            event.get("ticker"),
-            event.get("action"),
+            event.get("trade_id"),
+            event.get("symbol"),
+            event.get("side"),
             event.get("quantity"),
-            event.get("price")
+            event.get("price"),
+            event.get("total_value")
         )
     )
     conn.commit()
@@ -39,7 +41,7 @@ consumer = KafkaConsumer(
     bootstrap_servers = KAFKA_BROKER,
     value_deserializer = json_deserializer,
     group_id = GROUP_ID,
-    auto_offset_reset = "earliest"
+    auto_offset_reset = "latest"
     
 
 
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     try:
         for message in consumer:
            print(f"partition={message.partition} offset={message.offset} value={message.value}")
-           save_trade(message.value)
+           #save_trade(message.value)
     except KeyboardInterrupt:
         print("\n Consumer stopped by user")
     

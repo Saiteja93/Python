@@ -7,7 +7,16 @@ from models import TradeModel
 from sqlalchemy.orm import session
 from sqlalchemy import func
 from database import get_db
+from kafka import KafkaProducer
+import json
 
+producer = KafkaProducer(
+    bootstrap_servers = "localhost:9092",
+    value_serializer = lambda v: json.dumps(v).encode("utf-8"),
+    key_serializer = lambda k: k.encode("utf-8")
+)
+
+KAFKA_TOPIC = "trade-events"
 router = APIRouter(
         prefix="/trades",
         tags=["Trades"]
@@ -80,6 +89,23 @@ async def create_trade(trade: TradesCreate, db:db_dependency):
     db.add(new_trade)
     db.commit()
     db.refresh(new_trade)
+
+    trade_event = {
+        "trade_id": new_trade.trade_id,
+        "symbol": new_trade.symbol,
+        "side": new_trade.side,
+        "quantity": new_trade.quantity,
+        "price": float(new_trade.price),
+        "total_value": new_trade.total_value
+    }
+
+    producer.send(
+        KAFKA_TOPIC,
+        key=new_trade.symbol,
+        value=trade_event
+    )
+
+    producer.flush()
     return new_trade
 
 
