@@ -7,7 +7,16 @@ from models import TradeModel
 from sqlalchemy.orm import session
 from sqlalchemy import func
 from database import get_db
+from kafka import KafkaProducer
+import json
 
+producer = KafkaProducer(
+    bootstrap_servers = "localhost:9092",
+    value_serializer = lambda v: json.dumps(v).encode("utf-8"),
+    key_serializer = lambda k: k.encode("utf-8")
+)
+
+KAFKA_TOPIC = "trade-events"
 router = APIRouter(
         prefix="/trades",
         tags=["Trades"]
@@ -57,8 +66,9 @@ async def get_portfolio_value(db:db_dependency):
 
 
 #POST method to create trade
-@router.post("/", response_model=TradeResponse,status_code=status.HTTP_201_CREATED)
-async def create_trade(trade: TradesCreate, db:db_dependency):
+'''
+@router.post("/",status_code=status.HTTP_201_CREATED) #response_model=TradeResponse,
+async def create_trade(trade: TradesCreate): #db:db_dependency)
 
     if trade.side not in  ["buy","sell"]:
         raise HTTPException(status_code=400, detail="side must be buy or sell ")
@@ -76,14 +86,63 @@ async def create_trade(trade: TradesCreate, db:db_dependency):
         total_value = trade.price * trade.quantity
     )
 
-   # trades_db[trade_id]=new_trade
+
+    trades_db[trade_id]=new_trade
     db.add(new_trade)
     db.commit()
     db.refresh(new_trade)
-    return new_trade
 
+    trade_id = str(uuid.uuid4())
+    trade_event = {
+        "trade_id": trade_id,
+        "symbol": trade.symbol,
+        "side": trade.side,
+        "quantity": trade.quantity,
+        "price": float(trade.price),
+        "total_value": trade.price * trade.quantity
+    }
 
-#
+    producer.send(
+        KAFKA_TOPIC,
+        key=trade.symbol.encode("utf-8"),
+        value=trade_event
+    )
+
+    producer.flush()
+
+    return {"status":"pending", "trade_id": trade_id}
+
+'''
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_trade(trade: TradesCreate):
+    if trade.side not in ["buy","sell"]:
+        raise HTTPException(status_code=400, detail="side must be buy or sell")
+    
+    if trade.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be more than 0")
+    
+    trade_id = str(uuid.uuid4())
+    
+    trade_event = {
+        "trade_id": trade_id,
+        "symbol": trade.symbol.upper(),
+        "side": trade.side,
+        "quantity": trade.quantity,
+        "price": float(trade.price),
+        "total_value": trade.price * trade.quantity
+    }
+    
+    producer.send(
+        KAFKA_TOPIC,
+        key=trade.symbol.upper(),
+        value=trade_event
+    )
+    producer.flush()
+    
+    return {"status": "pending", "trade_id": trade_id}
+
+#delete data
 @router.delete("/{trade_id}",status_code=status.HTTP_200_OK)
 async def trade_delete(trade_id: str,db:db_dependency):
 
