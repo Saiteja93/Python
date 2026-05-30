@@ -52,7 +52,8 @@ if __name__ == "__main__":
     try:
         for message in consumer:
            print(f"partition={message.partition} offset={message.offset} value={message.value}")
-           #save_trade(message.value)
+           save_trade(message.value)
+           print(f" trade saved to db: {message.value['trade_id']}")
     except KeyboardInterrupt:
         print("\n Consumer stopped by user")
     
