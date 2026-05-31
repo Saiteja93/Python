@@ -1,6 +1,7 @@
 import json
 from kafka import KafkaProducer
 from random import randint,choice,uniform
+import uuid
 
 KAFKA_BROKER = "localhost:9092"
 KAFKA_TOPIC = "trade-events"
@@ -18,16 +19,16 @@ producer = KafkaProducer(
 
 ticker = choice(STOCKS)
 def build_trade(ticker):
-    
-    action = choice(["BUY","SELL"])
-    quantity = randint(1,100)
-    price = round(uniform(50.0, 500.0), 2)
 
     return {
-        "ticker":ticker,
-        "action":action,
-        "quantity":quantity,
-        "price": price,
+        "trade_id": str(uuid.uuid4()),
+        "symbol":ticker,
+        "side": choice(["buy","sell"]),
+        "quantity":randint(1,100),
+        "price": round(uniform(50.0, 500.0), 2),
+        "total_value": 0.0
+
+
     }
 
 if __name__=="__main__":
@@ -35,7 +36,7 @@ if __name__=="__main__":
         print(f"Producer sending data to topic {KAFKA_TOPIC}")
         ticker = choice(STOCKS)
         event = build_trade(ticker)
-        print(f"\nsending{event["action"]} {event["quantity"]} X {ticker}")
+        print(f"\nsending{event["side"]} {event["quantity"]} X {ticker}")
         producer.send(
             KAFKA_TOPIC,
             key=ticker.encode("utf-8"),
