@@ -36,10 +36,17 @@ db_dependency = Annotated[Session, Depends(get_db)]
 # ──────────────────────────────────────────────
 @router.get("/", response_model=List[TradeResponse], status_code=status.HTTP_200_OK)
 async def get_all_trades(db: db_dependency):
-    trades = db.query(TradeModel).all()
-    if not trades:
-        raise HTTPException(status_code=404, detail="No trades found")
-    return trades
+    try:
+        trades = db.query(TradeModel).all()
+        if not trades:
+           raise HTTPException(status_code=404, detail="No trades found")
+        return trades
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    
 
 # ──────────────────────────────────────────────
 # GET trade by ID
@@ -48,14 +55,19 @@ async def get_all_trades(db: db_dependency):
 async def get_trade_id(trade_id: str, db: db_dependency):
     if not trade_id.strip():
         raise HTTPException(status_code=400, detail="trade_id cannot be empty")
-    
-    trade = db.query(TradeModel).filter(
-        TradeModel.trade_id == trade_id
-    ).first()
+    try: 
+        trade = db.query(TradeModel).filter(
+            TradeModel.trade_id == trade_id
+            ).first()
+        if not trade:
+            raise HTTPException(status_code=404, detail=f"Trade {trade_id} not found")
+        return trade
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-    if not trade:
-        raise HTTPException(status_code=404, detail=f"Trade {trade_id} not found")
-    return trade
+   
 
 # ──────────────────────────────────────────────
 # GET trades by symbol
@@ -67,27 +79,35 @@ async def trades_symbol(symbol: str, db: db_dependency):
     
     if len(symbol) > 10:
         raise HTTPException(status_code=400, detail="Invalid symbol")
+    try:
+        trades = db.query(TradeModel).filter(
+            TradeModel.symbol == symbol.upper()).all()
 
-    trades = db.query(TradeModel).filter(
-        TradeModel.symbol == symbol.upper()
-    ).all()
-
-    if not trades:
-        raise HTTPException(status_code=404, detail=f"No trades found for {symbol.upper()}")
-    
-    return trades
+        if not trades:
+            raise HTTPException(status_code=404, detail=f"No trades found for {symbol.upper()}")
+        
+        return trades
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 # ──────────────────────────────────────────────
 # GET portfolio value
 # ──────────────────────────────────────────────
 @router.get("/portfolio/value")
 async def get_portfolio_value(db: db_dependency):
-    total = db.query(func.sum(TradeModel.total_value)).scalar()
-    total_value = total if total else 0.0
-    return {
-        "total_value": round(total_value, 2),
-        "currency": "USD"
-    }
+    try:
+        total = db.query(func.sum(TradeModel.total_value)).scalar()
+        total_value = total if total else 0.0
+        return {
+            "total_value": round(total_value, 2),
+            "currency": "USD"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 # ──────────────────────────────────────────────
 # POST — create trade (Kafka pattern)
@@ -116,13 +136,15 @@ async def create_trade(trade: TradesCreate):
         "price": float(trade.price),
         "total_value": trade.price * trade.quantity
     }
-
-    producer.send(
+    try:
+        producer.send(
         KAFKA_TOPIC,
         key=trade.symbol.upper(),
         value=trade_event
-    )
-    producer.flush()
+        )
+        producer.flush()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail = f"kafka error: {str(e)}")
 
     return {"status": "pending", "trade_id": trade_id}
 
@@ -133,14 +155,19 @@ async def create_trade(trade: TradesCreate):
 async def trade_delete(trade_id: str, db: db_dependency):
     if not trade_id.strip():
         raise HTTPException(status_code=400, detail="trade_id cannot be empty")
+    try:
 
-    trade = db.query(TradeModel).filter(
-        TradeModel.trade_id == trade_id
-    ).first()
+        trade = db.query(TradeModel).filter(
+            TradeModel.trade_id == trade_id
+        ).first()
 
-    if not trade:
-        raise HTTPException(status_code=404, detail=f"Trade {trade_id} not found")
+        if not trade:
+            raise HTTPException(status_code=404, detail=f"Trade {trade_id} not found")
 
-    db.delete(trade)
-    db.commit()
-    return {"message": f"Trade {trade_id} deleted successfully"}
+        db.delete(trade)
+        db.commit()
+        return {"message": f"Trade {trade_id} deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
