@@ -132,7 +132,7 @@ async def get_portfolio_value(db: db_dependency):
 # POST — create trade (Kafka pattern)
 # ──────────────────────────────────────────────
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_trade(trade: TradesCreate):
+async def create_trade(trade: TradesCreate, db:db_dependency):
     if trade.side not in ["buy", "sell"]:
         raise HTTPException(status_code=400, detail="side must be 'buy' or 'sell'")
 
@@ -153,26 +153,46 @@ async def create_trade(trade: TradesCreate):
         "side": trade.side,
         "quantity": trade.quantity,
         "price": float(trade.price),
-        "total_value": trade.price * trade.quantity
+        "total_value": round(trade.price * trade.quantity, 2)
     }
+    kafka_success = False
     for attempt in range(3):
 
         try:
             producer.send(
-            KAFKA_TOPIC,
-            key=trade.symbol.upper(),
-            value=trade_event
+                KAFKA_TOPIC,
+                key=trade.symbol.upper(),
+                value=trade_event
             )
             producer.flush()
+            kafka_success = True
+            print(f"Trade sent to kafka:{trade_id}")
             break
         except Exception as e:
-            if attempt == 2:#last attempt failed
-                raise HTTPException(
-                    status_code=500,
-                    detail="kafka unavailable - please try agaian"
-                )
             print(f"kafka retry{attempt + 1}/3...")
             time.sleep(1)
+    
+    #Fallback path to - DB directly        
+    if not kafka_success:
+        try:
+            print(f"Kafka down — falling back to DB")
+            new_trade = TradeModel(
+                trade_id=trade_id,
+                symbol=trade.symbol.upper(),
+                side=trade.side,
+                price=float(trade.price),
+                quantity=trade.quantity,
+                total_value=round(trade.price * trade.quantity, 2)
+            )
+            db.add(new_trade)
+            db.commit()
+            print(f"Fallback DB save successful: {trade_id}")
+        except Exception as db_error:
+            raise HTTPException(
+                status_code=500,
+                detail="Both Kafka and DB unavailable — please try again"
+            )
+
     
     #invalidate redis cache for this symbol
     cache_key = f"trades:symbol:{trade.symbol.upper()}"
