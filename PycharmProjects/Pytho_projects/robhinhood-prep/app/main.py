@@ -1,6 +1,6 @@
-from routes import trades
+from app.routes import trades
 from fastapi import FastAPI
-from database import engine,Base
+from app.database import engine,Base
 
 
 app= FastAPI()
