@@ -1,4 +1,16 @@
 services:
+  fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - kafka
+      - postgres
+      - redis
+    env_file:
+      - .env
+    restart: on-failure
+
   kafka:
     image: apache/kafka:3.7.0
     ports:

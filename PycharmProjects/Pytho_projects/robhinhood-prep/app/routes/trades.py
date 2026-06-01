@@ -2,26 +2,31 @@ from fastapi import HTTPException, APIRouter, Depends
 from typing import List, Annotated
 from starlette import status
 import uuid
-from schemas import TradesCreate, TradeResponse
-from models import TradeModel
+from app.schemas import TradesCreate, TradeResponse
+from app.models import TradeModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from database import get_db
+from app.database import get_db
 from kafka import KafkaProducer
 import json
-from redis_client import redis_client
+from app.redis_client import redis_client
+from dotenv import load_dotenv
+import os
 import time
 
+load_dotenv()
 # ──────────────────────────────────────────────
 # KAFKA SETUP
 # ──────────────────────────────────────────────
-KAFKA_TOPIC = "trade-events"
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC","trade-events")
 
-producer = KafkaProducer(
-    bootstrap_servers="localhost:9092",
-    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-    key_serializer=lambda k: k.encode("utf-8")
-)
+def get_producer():
+    return KafkaProducer(
+        bootstrap_servers=KAFKA_BROKER,
+        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        key_serializer=lambda k: k.encode("utf-8")
+        )
 
 # ──────────────────────────────────────────────
 # ROUTER SETUP
@@ -126,6 +131,7 @@ async def get_portfolio_value(db: db_dependency):
     except HTTPException:
         raise
     except Exception as e:
+        
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 # ──────────────────────────────────────────────
@@ -133,6 +139,7 @@ async def get_portfolio_value(db: db_dependency):
 # ──────────────────────────────────────────────
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_trade(trade: TradesCreate, db:db_dependency):
+    producer = get_producer()
     if trade.side not in ["buy", "sell"]:
         raise HTTPException(status_code=400, detail="side must be 'buy' or 'sell'")
 
@@ -195,6 +202,7 @@ async def create_trade(trade: TradesCreate, db:db_dependency):
             db.commit()
             print(f"Fallback DB save successful: {trade_id}")
         except Exception as db_error:
+            db.rollback()
             raise HTTPException(
                 status_code=500,
                 detail="Both Kafka and DB unavailable — please try again"
@@ -231,4 +239,5 @@ async def trade_delete(trade_id: str, db: db_dependency):
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
