@@ -18,23 +18,29 @@ def json_deserializer(data: bytes) -> dict:
     return json.loads(data.decode("utf-8"))
 
 def save_trade(event: dict):
+    try:
 
-    conn = psycopg2.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO trades(trade_id,symbol,side,quantity,price, total_value) VALUES(%s, %s,%s, %s,%s,%s)",
-        (
-            event.get("trade_id"),
-            event.get("symbol"),
-            event.get("side"),
-            event.get("quantity"),
-            event.get("price"),
-            event.get("total_value")
+        conn = psycopg2.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO trades(trade_id,symbol,side,quantity,price, total_value) VALUES(%s, %s,%s, %s,%s,%s)",
+            (
+                event.get("trade_id"),
+                event.get("symbol"),
+                event.get("side"),
+                event.get("quantity"),
+                event.get("price"),
+                event.get("total_value")
+            )
         )
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except psycopg2.errors.UniqueViolation:
+        print(f"Duplicate trade detected: {event.get('trade_id')} - skipping")
+        conn.rollback()
+        conn.close()
+
 
 consumer = KafkaConsumer(
     KAFKA_TOPIC,
@@ -64,6 +70,7 @@ if __name__ == "__main__":
     
     finally:
         consumer.close()
+        
 
 
     

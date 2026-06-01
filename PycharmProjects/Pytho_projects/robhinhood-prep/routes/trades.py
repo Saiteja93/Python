@@ -146,6 +146,13 @@ async def create_trade(trade: TradesCreate, db:db_dependency):
         raise HTTPException(status_code=400, detail="symbol cannot be empty")
 
     trade_id = str(uuid.uuid4())
+    # check for duplicate request
+    idempotency_key = f"idempotency:{trade_id}"
+    if redis_client.get(idempotency_key):
+        return {"status":"duplicate","trade_id":trade_id}
+    
+    #mark as processed for 60 seconds
+    redis_client.setex(idempotency_key,60,"processed")
 
     trade_event = {
         "trade_id": trade_id,
