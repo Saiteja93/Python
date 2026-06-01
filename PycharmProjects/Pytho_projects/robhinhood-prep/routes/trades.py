@@ -9,6 +9,7 @@ from sqlalchemy import func
 from database import get_db
 from kafka import KafkaProducer
 import json
+from redis_client import redis_client
 
 # ──────────────────────────────────────────────
 # KAFKA SETUP
@@ -79,14 +80,31 @@ async def trades_symbol(symbol: str, db: db_dependency):
     
     if len(symbol) > 10:
         raise HTTPException(status_code=400, detail="Invalid symbol")
+    
+    symbol = symbol.upper()
+    cache_key = f"trades:symbol:{symbol}"
     try:
+        #Redis cache
+        cached = redis_client.get(cache_key)
+        if cached:
+            print(f"Cache HIT for {symbol}")
+            return json.loads(cached)
+        
+        print(f"Cache miss for {symbol} - querying DB")
+
         trades = db.query(TradeModel).filter(
             TradeModel.symbol == symbol.upper()).all()
 
         if not trades:
             raise HTTPException(status_code=404, detail=f"No trades found for {symbol.upper()}")
         
+        #Stored in redis for 60seconds
+        trades_data = [TradeResponse.model_validate(t).model_dump() for t in trades]
+        redis_client.setex(cache_key, 60, json.dumps(trades_data))
+        print(f"stored in cache:{cache_key}")
         return trades
+    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -143,6 +161,10 @@ async def create_trade(trade: TradesCreate):
         value=trade_event
         )
         producer.flush()
+        cache_key = f"trades:symbol:{trade.symbol.upper()}"
+        redis_client.delete(cache_key)
+        print(f"Cache invalidated for {trade.symbol.upper()}")
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail = f"kafka error: {str(e)}")
 
