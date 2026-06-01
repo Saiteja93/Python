@@ -41,19 +41,24 @@ consumer = KafkaConsumer(
     bootstrap_servers = KAFKA_BROKER,
     value_deserializer = json_deserializer,
     group_id = GROUP_ID,
-    auto_offset_reset = "latest"
-    
+    auto_offset_reset = "latest",
+    enable_auto_commit = False
+    )
 
-
-
-)
 if __name__ == "__main__":
 
     try:
         for message in consumer:
            print(f"partition={message.partition} offset={message.offset} value={message.value}")
-           save_trade(message.value)
-           print(f" trade saved to db: {message.value['trade_id']}")
+
+           try:
+               save_trade(message.value)
+               consumer.commit()# only commit after succesfuk save
+               print(f" Trade saved to db: {message.value['trade_id']}")
+           except Exception as e:
+               print(f"Failed to save trade: {e} - will retey")
+
+            
     except KeyboardInterrupt:
         print("\n Consumer stopped by user")
     

@@ -10,6 +10,7 @@ from database import get_db
 from kafka import KafkaProducer
 import json
 from redis_client import redis_client
+import time
 
 # ──────────────────────────────────────────────
 # KAFKA SETUP
@@ -154,19 +155,30 @@ async def create_trade(trade: TradesCreate):
         "price": float(trade.price),
         "total_value": trade.price * trade.quantity
     }
-    try:
-        producer.send(
-        KAFKA_TOPIC,
-        key=trade.symbol.upper(),
-        value=trade_event
-        )
-        producer.flush()
-        cache_key = f"trades:symbol:{trade.symbol.upper()}"
-        redis_client.delete(cache_key)
-        print(f"Cache invalidated for {trade.symbol.upper()}")
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail = f"kafka error: {str(e)}")
+    for attempt in range(3):
+
+        try:
+            producer.send(
+            KAFKA_TOPIC,
+            key=trade.symbol.upper(),
+            value=trade_event
+            )
+            producer.flush()
+            break
+        except Exception as e:
+            if attempt == 2:#last attempt failed
+                raise HTTPException(
+                    status_code=500,
+                    detail="kafka unavailable - please try agaian"
+                )
+            print(f"kafka retry{attempt + 1}/3...")
+            time.sleep(1)
+    
+    #invalidate redis cache for this symbol
+    cache_key = f"trades:symbol:{trade.symbol.upper()}"
+    redis_client.delete(cache_key)
+    print(f"Cache invalidated for {trade.symbol.upper()}")
+
 
     return {"status": "pending", "trade_id": trade_id}
 

@@ -19,14 +19,16 @@ producer = KafkaProducer(
 
 ticker = choice(STOCKS)
 def build_trade(ticker):
+    quantity = randint(1,100)
+    price = round(uniform(50.0, 500.0), 2)
 
     return {
         "trade_id": str(uuid.uuid4()),
         "symbol":ticker,
         "side": choice(["buy","sell"]),
-        "quantity":randint(1,100),
-        "price": round(uniform(50.0, 500.0), 2),
-        "total_value": 0.0
+        "quantity":quantity,
+        "price": price,
+        "total_value": round(quantity * price, 2)
 
 
     }
