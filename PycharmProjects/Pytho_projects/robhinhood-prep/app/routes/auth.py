@@ -1,4 +1,4 @@
-from fastapi import APIRouter,HTTPException, Depends
+from fastapi import APIRouter,HTTPException, Depends,Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette import status
@@ -11,6 +11,10 @@ from typing import Annotated
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 load_dotenv()
 
@@ -57,7 +61,8 @@ def create_access_token(user_id: int, username: str, role: str):
 
 #Login endpoint
 @router.post("/login")
-async def login( db: db_dependency,
+@limiter.limit("5/minute")
+async def login( request: Request,db: db_dependency,
                 form_data : OAuth2PasswordRequestForm = Depends()
                 ):
     db_user = db.query(Users).filter(
