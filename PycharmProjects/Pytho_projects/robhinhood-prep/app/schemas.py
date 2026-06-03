@@ -14,6 +14,8 @@ class TradeResponse(BaseModel):
     quantity: int
     side: str
     total_value: float
+    user_id: int | None = None
+    placed_by: str | None = None
 
     class Config:
         from_attributes= True

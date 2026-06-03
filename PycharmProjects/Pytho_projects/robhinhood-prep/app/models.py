@@ -1,4 +1,5 @@
-from sqlalchemy import Column,Integer,Float,DateTime,String,Boolean,Numeric
+from sqlalchemy import Column,Integer,Float,DateTime,String,Boolean,Numeric,ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -14,6 +15,7 @@ class Users(Base):
     is_active = Column(Boolean, default=True)
     role = Column(String)
     phone_number = Column(String)
+    trades = relationship("TradeModel", back_populates="user")
 
 
 
@@ -27,3 +29,6 @@ class TradeModel(Base):
     side = Column(String, nullable=False)
     total_value = Column(Float, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    username = Column(String, nullable=True)
+    user = relationship("Users", back_populates="trades")

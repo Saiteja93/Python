@@ -1,11 +1,12 @@
 from fastapi import APIRouter,HTTPException, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette import status
 from app.database import get_db
 from app.models import Users
 from passlib.context import CryptContext
 from jose import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from pydantic import BaseModel
 import os
@@ -31,17 +32,51 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 db_dependency = Annotated[Session,Depends(get_db)]
 
+#
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+    first_name: str
+    last_name : str
+    role: str
 
 class UserLogin(BaseModel):
     email: str
     password: str
 
 #Creating access token
+def create_access_token(user_id: int, username: str, role: str):
+    payload = {
+        "user_id":user_id,
+        "username":username,
+        "role": role,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+#Login endpoint
+@router.post("/login")
+async def login( db: db_dependency,
+                form_data : OAuth2PasswordRequestForm = Depends()
+                ):
+    db_user = db.query(Users).filter(
+        (Users.username == form_data.username)|
+        (Users.email == form_data.username)
+        ).first()
+
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if not bcrypt_context.verify(form_data.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    token = create_access_token(db_user.id, db_user.username, db_user.role)
+
+    return {
+        "access_token":token,
+        "token_type": "bearer"
+    }
 
 ##Registering user POST endpoint
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -61,7 +96,9 @@ async def register(user:UserCreate, db: db_dependency):
         username = user.username,
         email = user.email,
         hashed_password=hashed_password,
-        role = "user",
+        first_name = user.first_name,
+        last_name = user.last_name,
+        role = user.role,
         is_active=True
     )
     db.add(new_user)
