@@ -85,18 +85,33 @@ async def get_all_trades(db: db_dependency, current_user : dict = Depends(get_cu
 # ──────────────────────────────────────────────
 # GET my trades
 # ──────────────────────────────────────────────
-@router.get("/my", response_model=List[TradeResponse], status_code=status.HTTP_200_OK)
-async def get_my_trades(db: db_dependency, current_user: dict = Depends(get_current_user)):
+@router.get("/my", status_code=status.HTTP_200_OK)
+async def get_my_trades(db: db_dependency, 
+                        current_user: dict = Depends(get_current_user),
+                        page: int=1,
+                        limit: int=10):
     
-
+    offset = (page -1) * limit
     try:
-        trades = db.query(TradeModel).filter(
-            TradeModel.user_id == current_user["user_id"]
-            ).all()
+        total = db.query(TradeModel)\
+            .filter(TradeModel.user_id == current_user["user_id"])\
+            .count()
+            
+        trades = db.query(TradeModel)\
+            .filter(TradeModel.user_id == current_user["user_id"])\
+            .order_by(TradeModel.created_at.desc())\
+            .offset(offset).limit(limit)\
+            .all()
         
         if not trades:
            raise HTTPException(status_code=404, detail="No trades found")
-        return trades
+        return {
+            "trades": trades,
+            "total": total,
+            "page": page,
+            "limit":limit,
+            "pages": (total + limit -1)// limit 
+        }
     except HTTPException:
         raise
     except Exception as e:
