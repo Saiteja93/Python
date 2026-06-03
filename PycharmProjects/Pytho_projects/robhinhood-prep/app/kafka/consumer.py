@@ -23,14 +23,16 @@ def save_trade(event: dict):
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO trades(trade_id,symbol,side,quantity,price, total_value) VALUES(%s, %s,%s, %s,%s,%s)",
+            "INSERT INTO trades(trade_id,symbol,side,quantity,price, total_value, user_id, username) VALUES(%s, %s,%s, %s,%s,%s,%s,%s)",
             (
                 event.get("trade_id"),
                 event.get("symbol"),
                 event.get("side"),
                 event.get("quantity"),
                 event.get("price"),
-                event.get("total_value")
+                event.get("total_value"),
+                event.get("user_id"),
+                event.get("username")
             )
         )
         conn.commit()

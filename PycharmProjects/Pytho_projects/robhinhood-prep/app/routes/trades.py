@@ -1,9 +1,10 @@
 from fastapi import HTTPException, APIRouter, Depends
+from fastapi.security import OAuth2PasswordBearer
 from typing import List, Annotated
 from starlette import status
 import uuid
 from app.schemas import TradesCreate, TradeResponse
-from app.models import TradeModel
+from app.models import TradeModel, Users
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
@@ -11,10 +12,12 @@ from kafka import KafkaProducer
 import json
 from app.redis_client import redis_client
 from dotenv import load_dotenv
+from jose import jwt, JWTError
 import os
 import time
 
 load_dotenv()
+
 # ──────────────────────────────────────────────
 # KAFKA SETUP
 # ──────────────────────────────────────────────
@@ -37,14 +40,57 @@ router = APIRouter(
 )
 
 db_dependency = Annotated[Session, Depends(get_db)]
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+# ──────────────────────────────────────────────
+# Current user
+# ──────────────────────────────────────────────
+
+def get_current_user(token: str = Depends(oauth2_bearer)):
+    try:
+        payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        username = payload.get("username")
+        role = payload.get("role")
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        return {"user_id": user_id, "username": username, "role": role}
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 
 # ──────────────────────────────────────────────
 # GET all trades
 # ──────────────────────────────────────────────
 @router.get("/", response_model=List[TradeResponse], status_code=status.HTTP_200_OK)
-async def get_all_trades(db: db_dependency):
+async def get_all_trades(db: db_dependency, current_user : dict = Depends(get_current_user)):
+
+    if current_user["role"]!= "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
     try:
         trades = db.query(TradeModel).all()
+        if not trades:
+            raise HTTPException(status_code=404, detail="No trades found")
+        return trades
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error:{str(e)}")
+
+# ──────────────────────────────────────────────
+# GET my trades
+# ──────────────────────────────────────────────
+@router.get("/my", response_model=List[TradeResponse], status_code=status.HTTP_200_OK)
+async def get_my_trades(db: db_dependency, current_user: dict = Depends(get_current_user)):
+    
+
+    try:
+        trades = db.query(TradeModel).filter(
+            TradeModel.user_id == current_user["user_id"]
+            ).all()
+        
         if not trades:
            raise HTTPException(status_code=404, detail="No trades found")
         return trades
@@ -59,7 +105,8 @@ async def get_all_trades(db: db_dependency):
 # GET trade by ID
 # ──────────────────────────────────────────────
 @router.get("/id/{trade_id}", response_model=TradeResponse)
-async def get_trade_id(trade_id: str, db: db_dependency):
+async def get_trade_id(trade_id: str, db: db_dependency,
+                       current_user: dict = Depends(get_current_user)):
     if not trade_id.strip():
         raise HTTPException(status_code=400, detail="trade_id cannot be empty")
     try: 
@@ -68,6 +115,9 @@ async def get_trade_id(trade_id: str, db: db_dependency):
             ).first()
         if not trade:
             raise HTTPException(status_code=404, detail=f"Trade {trade_id} not found")
+        if current_user["role"]!= "admin" and trade.user_id != current_user["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
         return trade
     except HTTPException:
         raise
@@ -138,7 +188,15 @@ async def get_portfolio_value(db: db_dependency):
 # POST — create trade (Kafka pattern)
 # ──────────────────────────────────────────────
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_trade(trade: TradesCreate, db:db_dependency):
+async def create_trade(trade: TradesCreate, 
+                       db:db_dependency, 
+                       current_user: dict = Depends(get_current_user)
+                       ):
+    db_user = db.query(Users).filter(Users.id==current_user["user_id"]).first()
+    full_name = f"{db_user.first_name} {db_user.last_name}" if db_user else current_user["username"]
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication failed")
+    
     producer = get_producer()
     if trade.side not in ["buy", "sell"]:
         raise HTTPException(status_code=400, detail="side must be 'buy' or 'sell'")
@@ -167,7 +225,9 @@ async def create_trade(trade: TradesCreate, db:db_dependency):
         "side": trade.side,
         "quantity": trade.quantity,
         "price": float(trade.price),
-        "total_value": round(trade.price * trade.quantity, 2)
+        "total_value": round(trade.price * trade.quantity, 2),
+        "user_id": current_user["user_id"],
+        "username": current_user["username"]
     }
     kafka_success = False
     for attempt in range(3):
@@ -196,7 +256,9 @@ async def create_trade(trade: TradesCreate, db:db_dependency):
                 side=trade.side,
                 price=float(trade.price),
                 quantity=trade.quantity,
-                total_value=round(trade.price * trade.quantity, 2)
+                total_value=round(trade.price * trade.quantity, 2),
+                user_id = current_user["user_id"],
+                username = current_user["username"]
             )
             db.add(new_trade)
             db.commit()
@@ -215,7 +277,7 @@ async def create_trade(trade: TradesCreate, db:db_dependency):
     print(f"Cache invalidated for {trade.symbol.upper()}")
 
 
-    return {"status": "pending", "trade_id": trade_id}
+    return {"status": "pending", "trade_id": trade_id, "placed_by": full_name}
 
 # ──────────────────────────────────────────────
 # DELETE trade
