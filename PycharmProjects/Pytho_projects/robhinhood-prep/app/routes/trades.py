@@ -191,7 +191,7 @@ async def get_portfolio_value(db: db_dependency):
 # POST — create trade (Kafka pattern)
 # ──────────────────────────────────────────────
 @router.post("/", status_code=status.HTTP_201_CREATED)
-@limiter.limit("3/minute")
+@limiter.limit("100/minute")
 async def create_trade(request: Request,
                        trade: TradesCreate, 
                        db:db_dependency, 
