@@ -1,4 +1,4 @@
-from fastapi import HTTPException, APIRouter, Depends
+from fastapi import HTTPException, APIRouter, Depends,Request
 from fastapi.security import OAuth2PasswordBearer
 from typing import List, Annotated
 from starlette import status
@@ -13,11 +13,14 @@ import json
 from app.redis_client import redis_client
 from dotenv import load_dotenv
 from jose import jwt, JWTError
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
 import os
 import time
 
 load_dotenv()
-
+limiter = Limiter(key_func=get_remote_address)
 # ──────────────────────────────────────────────
 # KAFKA SETUP
 # ──────────────────────────────────────────────
@@ -188,7 +191,9 @@ async def get_portfolio_value(db: db_dependency):
 # POST — create trade (Kafka pattern)
 # ──────────────────────────────────────────────
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_trade(trade: TradesCreate, 
+@limiter.limit("100/minute")
+async def create_trade(request: Request,
+                       trade: TradesCreate, 
                        db:db_dependency, 
                        current_user: dict = Depends(get_current_user)
                        ):
