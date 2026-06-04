@@ -163,7 +163,10 @@ async def trades_symbol(symbol: str, db: db_dependency):
         if cached:
             print(f"Cache HIT for {symbol}")
             return json.loads(cached)
-        
+    except Exception:
+        print(f"Redis unavailable - falling back to DB")
+     
+    try:    
         print(f"Cache miss for {symbol} - querying DB")
 
         trades = db.query(TradeModel).filter(
@@ -171,11 +174,15 @@ async def trades_symbol(symbol: str, db: db_dependency):
 
         if not trades:
             raise HTTPException(status_code=404, detail=f"No trades found for {symbol.upper()}")
-        
-        #Stored in redis for 60seconds
-        trades_data = [TradeResponse.model_validate(t).model_dump() for t in trades]
-        redis_client.setex(cache_key, 60, json.dumps(trades_data))
-        print(f"stored in cache:{cache_key}")
+
+        try:    
+            #Stored in redis for 60seconds
+            trades_data = [TradeResponse.model_validate(t).model_dump() for t in trades]
+            redis_client.setex(cache_key, 60, json.dumps(trades_data))
+            print(f"stored in cache:{cache_key}")
+        except Exception:
+            print(f"Redis unavilable - skipping cache store")
+
         return trades
     
 
