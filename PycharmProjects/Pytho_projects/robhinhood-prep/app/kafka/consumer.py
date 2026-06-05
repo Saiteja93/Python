@@ -1,6 +1,11 @@
 import json
 from kafka import KafkaConsumer
 import psycopg2
+from app.logger import logger
+import logging
+
+logger = logging.getLogger('consumer')
+logging.basicConfig(level=logging.INFO)
 
 KAFKA_BROKER = "localhost:9092"
 KAFKA_TOPIC = "trade-events"
@@ -39,7 +44,7 @@ def save_trade(event: dict):
         cursor.close()
         conn.close()
     except psycopg2.errors.UniqueViolation:
-        print(f"Duplicate trade detected: {event.get('trade_id')} - skipping")
+        logging.warning(f"Duplicate trade detected: {event.get('trade_id')} - skipping")
         conn.rollback()
         conn.close()
 
@@ -62,13 +67,15 @@ if __name__ == "__main__":
            try:
                save_trade(message.value)
                consumer.commit()# only commit after succesfuk save
-               print(f" Trade saved to db: {message.value['trade_id']}")
+               #print(f" Trade saved to db: {message.value['trade_id']}")
+               logging.info(f"Trades saved: {message.value["trade_id"]}")
            except Exception as e:
-               print(f"Failed to save trade: {e} - will retey")
+               logging.info(f"Failed to save trade: {e} - will retey")
+               
 
             
     except KeyboardInterrupt:
-        print("\n Consumer stopped by user")
+        logging.info("\n Consumer stopped by user")
     
     finally:
         consumer.close()

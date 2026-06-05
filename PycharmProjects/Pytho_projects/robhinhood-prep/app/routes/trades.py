@@ -16,6 +16,7 @@ from jose import jwt, JWTError
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 import time as time_module
+from app.logger import logger
 import os
 import time
 
@@ -83,16 +84,26 @@ def send_to_kafka_background(trade_event: dict, db_session):
             )
             producer.flush()
             kafka_success = True
-            print(f"Background: Trade sent to kafka:{trade_event['trade_id']}")
+            #print(f"Background: Trade sent to kafka:{trade_event['trade_id']}")
+            logger.info("kafka_send_success",
+                        trade_id = trade_event["trade_id"],
+                        kafka_time_ms= kafka_time)
+            
             break
         except Exception as e:
-            print(f"kafka retry{attempt + 1}/3...")
+            #print(f"kafka retry{attempt + 1}/3...")
+            logger.warning("kafka_retry",
+                           trade_id = trade_event["trade_id"],
+                           attempt= attempt + 1)
             time.sleep(1)
     
     #Fallback path to - DB directly        
     if not kafka_success:
         try:
-            print(f"Kafka down — falling back to DB")
+            #print(f"Kafka down — falling back to DB")
+            logger.error("kafka_failed_db_fallback",
+                        trade_id = trade_event["trade_id"])
+            
             new_trade = TradeModel(
                 trade_id=trade_event['trade_id'],
                 symbol=trade_event['symbol.upper'],
@@ -105,13 +116,20 @@ def send_to_kafka_background(trade_event: dict, db_session):
             )
             db_session.add(new_trade)
             db_session.commit()
-            print(f"Fallback DB save successful: {trade_event['trade_id']}")
+            #print(f"Fallback DB save successful: {trade_event['trade_id']}")
+            logger.info("db_fallback_success",
+                        trade_id = trade_event["trade_id"])
+            
         except Exception as db_error:
             db_session.rollback()
             raise HTTPException(
                 status_code=500,
                 detail="Both Kafka and DB unavailable — please try again"
             )
+        logger.error("kafka_and_db_failed",
+                    trade_id=trade_event["trade_id"],
+                    error=str(db_error))
+        
     end = time_module.time()
     kafka_time = round((end-start) * 1000, 2)
     print(f"Kafka send time:{kafka_time}ms")
@@ -215,13 +233,16 @@ async def trades_symbol(symbol: str, db: db_dependency):
         #Redis cache
         cached = redis_client.get(cache_key)
         if cached:
-            print(f"Cache HIT for {symbol}")
+            #print(f"Cache HIT for {symbol}")
+            logger.info("cache_hit", symbol=symbol)
             return json.loads(cached)
     except Exception:
-        print(f"Redis unavailable - falling back to DB")
+        #print(f"Redis unavailable - falling back to DB")
+        logger.warning("redis_unavailable", action="cache_read")
      
     try:    
-        print(f"Cache miss for {symbol} - querying DB")
+        #print(f"Cache miss for {symbol} - querying DB")
+        logger.info("cache_miss", symbol=symbol)
 
         trades = db.query(TradeModel).filter(
             TradeModel.symbol == symbol.upper()).all()
@@ -323,9 +344,16 @@ async def create_trade(request: Request,
     #invalidate redis cache for this symbol
     cache_key = f"trades:symbol:{trade.symbol.upper()}"
     redis_client.delete(cache_key)
-    print(f"Cache invalidated for {trade.symbol.upper()}")
+    #print(f"Cache invalidated for {trade.symbol.upper()}")
+    logger.info("cache_invalidated",
+            symbol= trade.symbol.upper())
 
-
+    logger.info("trade_received",
+                trade_id = trade_id,
+                symbol=trade_event["symbol"],
+                user_id=current_user["user_id"],
+                response_time_ms=response_time
+                )
     return {"status": "pending", "trade_id": trade_id, "placed_by": full_name}
 
 # ──────────────────────────────────────────────
