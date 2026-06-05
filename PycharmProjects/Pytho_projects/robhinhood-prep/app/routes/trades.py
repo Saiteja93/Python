@@ -1,4 +1,4 @@
-from fastapi import HTTPException, APIRouter, Depends,Request
+from fastapi import HTTPException, APIRouter, Depends,Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
 from typing import List, Annotated
 from starlette import status
@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from jose import jwt, JWTError
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-
+import time as time_module
 import os
 import time
 
@@ -62,6 +62,60 @@ def get_current_user(token: str = Depends(oauth2_bearer)):
         return {"user_id": user_id, "username": username, "role": role}
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+
+
+# ──────────────────────────────────────────────
+# Kafka Background task
+# ──────────────────────────────────────────────
+def send_to_kafka_background(trade_event: dict, db_session):
+    
+    start = time_module.time()
+
+    kafka_success = False
+    for attempt in range(3):
+        try:
+            producer = get_producer()
+            producer.send(
+                KAFKA_TOPIC,
+                key=trade_event["symbol"],
+                value=trade_event
+            )
+            producer.flush()
+            kafka_success = True
+            print(f"Background: Trade sent to kafka:{trade_event['trade_id']}")
+            break
+        except Exception as e:
+            print(f"kafka retry{attempt + 1}/3...")
+            time.sleep(1)
+    
+    #Fallback path to - DB directly        
+    if not kafka_success:
+        try:
+            print(f"Kafka down — falling back to DB")
+            new_trade = TradeModel(
+                trade_id=trade_event['trade_id'],
+                symbol=trade_event['symbol.upper'],
+                side=trade_event['side'],
+                price=float(trade_event['price']),
+                quantity=trade_event['quantity'],
+                total_value=round(trade_event['price'] * trade_event['quantity'], 2),
+                user_id = trade_event["user_id"],
+                username = trade_event["username"]
+            )
+            db_session.add(new_trade)
+            db_session.commit()
+            print(f"Fallback DB save successful: {trade_event['trade_id']}")
+        except Exception as db_error:
+            db_session.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="Both Kafka and DB unavailable — please try again"
+            )
+    end = time_module.time()
+    kafka_time = round((end-start) * 1000, 2)
+    print(f"Kafka send time:{kafka_time}ms")
+
 
 
 # ──────────────────────────────────────────────
@@ -216,9 +270,11 @@ async def get_portfolio_value(db: db_dependency):
 @limiter.limit("100/minute")
 async def create_trade(request: Request,
                        trade: TradesCreate, 
-                       db:db_dependency, 
+                       db:db_dependency,
+                       background_tasks: BackgroundTasks, 
                        current_user: dict = Depends(get_current_user)
                        ):
+    start_time = time_module.time() #start timer
     db_user = db.query(Users).filter(Users.id==current_user["user_id"]).first()
     full_name = f"{db_user.first_name} {db_user.last_name}" if db_user else current_user["username"]
     if not current_user:
@@ -256,48 +312,14 @@ async def create_trade(request: Request,
         "user_id": current_user["user_id"],
         "username": current_user["username"]
     }
-    kafka_success = False
-    for attempt in range(3):
+   
+    #send to kafka in background
+    background_tasks.add_task(send_to_kafka_background, trade_event, db)
+    end_time = time_module.time() #End time
 
-        try:
-            producer.send(
-                KAFKA_TOPIC,
-                key=trade.symbol.upper(),
-                value=trade_event
-            )
-            producer.flush()
-            kafka_success = True
-            print(f"Trade sent to kafka:{trade_id}")
-            break
-        except Exception as e:
-            print(f"kafka retry{attempt + 1}/3...")
-            time.sleep(1)
-    
-    #Fallback path to - DB directly        
-    if not kafka_success:
-        try:
-            print(f"Kafka down — falling back to DB")
-            new_trade = TradeModel(
-                trade_id=trade_id,
-                symbol=trade.symbol.upper(),
-                side=trade.side,
-                price=float(trade.price),
-                quantity=trade.quantity,
-                total_value=round(trade.price * trade.quantity, 2),
-                user_id = current_user["user_id"],
-                username = current_user["username"]
-            )
-            db.add(new_trade)
-            db.commit()
-            print(f"Fallback DB save successful: {trade_id}")
-        except Exception as db_error:
-            db.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail="Both Kafka and DB unavailable — please try again"
-            )
+    response_time = round((end_time - start_time) * 1000, 2)
+    print(f" Response time: {response_time}ms")
 
-    
     #invalidate redis cache for this symbol
     cache_key = f"trades:symbol:{trade.symbol.upper()}"
     redis_client.delete(cache_key)
