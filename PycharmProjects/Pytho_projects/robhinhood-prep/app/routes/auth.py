@@ -13,6 +13,7 @@ import os
 from dotenv import load_dotenv
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from app.logger import logger
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -74,10 +75,12 @@ async def login( request: Request,db: db_dependency,
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     if not bcrypt_context.verify(form_data.password, db_user.hashed_password):
+        logger.warning("user_login_failed", email=form_data.username)
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     token = create_access_token(db_user.id, db_user.username, db_user.role)
-
+    
+    logger.info("user_login_success", username=db_user.username)
     return {
         "access_token":token,
         "token_type": "bearer"
@@ -108,5 +111,6 @@ async def register(user:UserCreate, db: db_dependency):
     )
     db.add(new_user)
     db.commit()
+    logger.info("user_registration", username=user.username, email=user.email)
 
     return {"message": "user registered successfully"}
