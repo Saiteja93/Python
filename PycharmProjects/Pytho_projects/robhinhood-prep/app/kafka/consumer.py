@@ -1,11 +1,15 @@
 import json
 from kafka import KafkaConsumer
 import psycopg2
-from app.logger import logger
+#from app.logger import logger
 import logging
 
-logger = logging.getLogger('consumer')
-logging.basicConfig(level=logging.INFO)
+#logger = logging.getLogger('consumer')
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='{"time:"%(asctime)s", "level": "%(levelname)s","msg":"%(message)s}'
+)
 
 KAFKA_BROKER = "localhost:9092"
 KAFKA_TOPIC = "trade-events"

@@ -32,7 +32,10 @@ def get_producer():
     return KafkaProducer(
         bootstrap_servers=KAFKA_BROKER,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-        key_serializer=lambda k: k.encode("utf-8")
+        key_serializer=lambda k: k.encode("utf-8"),
+        enable_idempotence=True,
+        retries=3,
+        acks='all'
         )
 
 # ──────────────────────────────────────────────
@@ -73,40 +76,35 @@ def send_to_kafka_background(trade_event: dict, db_session):
     
     start = time_module.time()
 
-    kafka_success = False
-    for attempt in range(3):
-        try:
-            producer = get_producer()
-            producer.send(
-                KAFKA_TOPIC,
-                key=trade_event["symbol"],
-                value=trade_event
-            )
-            producer.flush()
-            kafka_success = True
-            #print(f"Background: Trade sent to kafka:{trade_event['trade_id']}")
-            logger.info("kafka_send_success",
-                        trade_id = trade_event["trade_id"],
-                        kafka_time_ms= kafka_time)
-            
-            break
-        except Exception as e:
-            #print(f"kafka retry{attempt + 1}/3...")
-            logger.warning("kafka_retry",
-                           trade_id = trade_event["trade_id"],
-                           attempt= attempt + 1)
-            time.sleep(1)
-    
-    #Fallback path to - DB directly        
-    if not kafka_success:
-        try:
-            #print(f"Kafka down — falling back to DB")
-            logger.error("kafka_failed_db_fallback",
-                        trade_id = trade_event["trade_id"])
-            
+    try:
+        producer = get_producer()
+        producer.send(
+            KAFKA_TOPIC,
+            key=trade_event["symbol"],
+            value=trade_event
+        )
+        producer.flush()
+        end = time_module.time()
+        kafka_time = round((end-start) * 1000, 2)
+        #print(f"Background: Trade sent to kafka:{trade_event['trade_id']}")
+        logger.info("kafka_send_success",
+                    trade_id = trade_event["trade_id"],
+                    kafka_time_ms= kafka_time)
+        return
+        
+    except Exception as e:
+        #print(f"kafka retry{attempt + 1}/3...")
+        
+
+#Fallback path to - DB directly       
+        #print(f"Kafka down — falling back to DB")
+        logger.error("kafka_failed_db_fallback",
+                    trade_id = trade_event["trade_id"],
+                    error=str(e))
+        try: 
             new_trade = TradeModel(
                 trade_id=trade_event['trade_id'],
-                symbol=trade_event['symbol.upper'],
+                symbol=trade_event['symbol'],
                 side=trade_event['side'],
                 price=float(trade_event['price']),
                 quantity=trade_event['quantity'],
@@ -122,17 +120,10 @@ def send_to_kafka_background(trade_event: dict, db_session):
             
         except Exception as db_error:
             db_session.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail="Both Kafka and DB unavailable — please try again"
-            )
-        logger.error("kafka_and_db_failed",
-                    trade_id=trade_event["trade_id"],
-                    error=str(db_error))
+            logger.error("kafka_and_db_failed",
+                        trade_id=trade_event["trade_id"],
+                        error=str(db_error))
         
-    end = time_module.time()
-    kafka_time = round((end-start) * 1000, 2)
-    print(f"Kafka send time:{kafka_time}ms")
 
 
 
